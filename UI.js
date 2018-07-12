@@ -5,7 +5,9 @@ var fs = require('fs');
 var screen = blessed.screen();
 
 var UI = {};
+// 게임을 저장한다.
 var savegame = function(){
+  // 유전자(Genomes)를 json으로 저장합니다.
   var jsonGenomes = [];
   for (var k in UI.learner.genomes) {
     jsonGenomes.push(UI.learner.genomes[k].toJSON());
@@ -13,6 +15,8 @@ var savegame = function(){
 
   UI.logger.log('Saving '+jsonGenomes.length+' genomes...');
 
+  // genomes 디렉토리 안에 파일을 저장합니다.
+  // 파일 이름 : gen_세대수_현재시간.json
   var dir = './genomes';
   var fileName = dir + '/gen_'+UI.learner.generation+'_'+Date.now()+'.json';
   fs.writeFile(fileName, JSON.stringify(jsonGenomes), function (err){
@@ -21,14 +25,14 @@ var savegame = function(){
     } else {
       UI.logger.log('Saved to '+fileName);
     }
-
+    // 초기화(Refresh)
     UI.refreshFiles();
   });
 
 };
 
 
-// Initialize UI objects
+// UI 오브젝트 초기화
 UI.init = function (gameManipulator, learner) {
   UI.gm = gameManipulator;
   UI.learner = learner;
@@ -40,7 +44,7 @@ UI.init = function (gameManipulator, learner) {
   });
 
 
-  // Build Sensor inputs
+  // 센서 입력값을 만든다
   UI.uiSensors = UI.grid.set(0, 0, 3, 6, contrib.bar, {
     label: 'Network Inputs',
     // bg: 'white',
@@ -51,7 +55,7 @@ UI.init = function (gameManipulator, learner) {
   });
 
 
-  // Build Log box
+  // 로그Log) box를 생성한다.
   UI.logger = UI.grid.set(3, 0, 3, 6, contrib.log, {
     fg: 'green',
     selectedFg: 'green',
@@ -59,7 +63,7 @@ UI.init = function (gameManipulator, learner) {
   });
 
 
-  // Current score/time view
+  // 현재 점수와 시간 view를 생성한다.
   UI.uiScore = UI.grid.set(6, 0, 3, 3, blessed.Text, {
     label: 'Game Stats',
     // bg: 'green',
@@ -69,7 +73,7 @@ UI.init = function (gameManipulator, learner) {
   });
 
 
-  // Current Genomes stats
+  // 현재 유전자(Genomes) 정보를 보여줍니다.
   UI.uiGenomes = UI.grid.set(6, 3, 3, 3, blessed.Text, {
     label: 'Genome Stats',
     // bg: 'green',
@@ -79,13 +83,13 @@ UI.init = function (gameManipulator, learner) {
   });
 
 
-  // Load Tree
+  // 유전자를 가져오는 Load Tree를 생성합니다
   UI.savesTree = UI.grid.set(9, 0, 3, 3, contrib.tree, {
     label: 'Saved Genomes',
   });
 
 
-  // Callback for Loading genomes and focusing tree
+  // 유전자(Genomes)를 불러오는 콜백(callback) 그리고 tree에 forcusing
   screen.key(['l','L'], UI.savesTree.focus.bind(UI.savesTree));
   UI.savesTree.on('click', UI.savesTree.focus.bind(UI.savesTree));
   UI.savesTree.on('select', function (item){
@@ -107,7 +111,7 @@ UI.init = function (gameManipulator, learner) {
   UI.refreshFiles();
 
 
-  // Save Btn
+  // Save 버튼 생성
   UI.btnSave = UI.grid.set(9, 3, 3, 3, blessed.box, {
     label: 'Save to File',
     bg: 'green',
@@ -141,8 +145,7 @@ UI.init = function (gameManipulator, learner) {
   screen.render();
 };
 
-
-// Read entire folder and select files that match a .json file
+// 전체 폴더를 읽어와 일치하는 Json 파일을 선택합니다.
 UI.refreshFiles = function (){
   var files = [];
   var fileData = {
@@ -153,7 +156,7 @@ UI.refreshFiles = function (){
     }]
   };
 
-  // Populate tree
+  // 유전자 세대 수를 트리(tree)를 가져옵니다.
   UI.logger.log('Reading genomes dir...');
   var files = fs.readdirSync('./genomes');
   for (var k in files) {
@@ -166,15 +169,15 @@ UI.refreshFiles = function (){
 
     }
   }
-
+  // 트리(tree)로 저장합니다.
   UI.savesTree.setData(fileData);
 }
 
 
-// Updates data on the screen and render it
+// UI 화면에 데이터를 업데이트하고 랜더링 합니다.
 UI.render = function () {
 
-  // Update data
+  // 데이터 업데이트
   UI.uiSensors.setData({
     titles: ['Distance', 'Size', 'Speed', 'Activation'],
     data: [
@@ -185,7 +188,7 @@ UI.render = function () {
     ]
   })
 
-  // Set Genome stats and score
+  // 유전자(Genome) 정보와 점수를 설정합니다.
   var learn = UI.learner;
   var uiStats = '';
   uiStats += 'Status: ' + learn.state + '\n';
@@ -204,11 +207,11 @@ UI.render = function () {
     UI.uiGenomes.setText('Loading...');
   }
 
-  // Render screen
+  // screen 랜더링(Rendering) 합니다.
   screen.render();
 }
 
-// Continuously render screen
+// 연속적으로 screen 랜더링(Rendering) 합니다.
 setInterval(UI.render, 25);
 
 module.exports = UI;
