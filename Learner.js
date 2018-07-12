@@ -8,24 +8,24 @@ var Network = synaptic.Network;
 
 var Learn = {
 
-  // Array of networks for current Genomes
-  // (Genomes will be added the key `fitness`)
+  // 현재 유전자(Genomes)를 위한 네트워크의 배열
+  // 유전자는 fitness(적합도)라는 키로 추가가 되어집니다.
   genomes: [],
 
-  // Current state of learning [STOP, LEARNING]
+  // 현재 학습 [STOP, LEARNING] 상태 변수
   state: 'STOP',
 
-  // Current genome/generation tryout
+  // 현재 유전자/세대수 변수
   genome: 0,
   generation: 0,
 
-  // Set this, to verify genome experience BEFORE running it
+  // 이것을 true로 설정하면, 실행이 되기전에 유전자(genome) 실험을 확인해봅니다.
   shouldCheckExperience: false,
 
 };
 
 
-// Initialize the Learner
+// 학습기를 초기화합니다.
 Learn.init = function (gameManip, ui, genomeUnits, selection, mutationProb) {
   Learn.gm = gameManip;
   Learn.ui = ui;
@@ -39,10 +39,10 @@ Learn.init = function (gameManip, ui, genomeUnits, selection, mutationProb) {
 }
 
 
-// Build genomes before calling executeGeneration.
+// executeGeneration을 호출하기 이전에 유전자(genomes)를 빌드(build)합니다.
 Learn.startLearning = function () {
 
-  // Build genomes if needed
+  // 유전자 빌드가 필요하다면
   while (Learn.genomes.length < Learn.genomeUnits) {
     Learn.genomes.push(Learn.buildGenome(3, 1));
   }
@@ -52,14 +52,14 @@ Learn.startLearning = function () {
 }
 
 
-// Given the entire generation of genomes (An array),
-// applyes method `executeGenome` for each element.
-// After all elements have completed executing:
-// 
-// 1) Select best genomes
-// 2) Does cross over (except for 2 genomes)
-// 3) Does Mutation-only on remaining genomes
-// 4) Execute generation (recursivelly)
+// 유전자 세대 전체(배열)를 감안할 때,
+// 각 요소에 `executeGenome` 메소드를 적용합니다.
+// 모든 요소가 완료되면 :
+//
+// 1) 최고의 유전자(genomes) 선택
+// 2) 크로스 오버(cross-over) (2개의 유전자(genomes) 제외)
+// 3) 남아있는 유전자에서만 돌연변이(mutation)를합니다.
+// 4) 생성 실행 (반복적으로)
 Learn.executeGeneration = function (){
   if (Learn.state == 'STOP') {
     return;
@@ -72,47 +72,47 @@ Learn.executeGeneration = function (){
 
   async.mapSeries(Learn.genomes, Learn.executeGenome, function (argument) {
 
-    // Kill worst genomes
+    // 안좋은 유전자는 죽입니다.
     Learn.genomes = Learn.selectBestGenomes(Learn.selection);
 
-    // Copy best genomes
+    // 제일 좋은 유전자는 복사합니다.
     var bestGenomes = _.clone(Learn.genomes);
 
-    // Cross Over ()
+    // 교차 - 크로스 오버(Cross Over)
     while (Learn.genomes.length < Learn.genomeUnits - 2) {
-      // Get two random Genomes
+      // 두 개의 랜덤 유전자를 가져옵니다.
       var genA = _.sample(bestGenomes).toJSON();
       var genB = _.sample(bestGenomes).toJSON();
 
-      // Cross over and Mutate
+      // 교차(cross over)와 돌연변이(mutate)
       var newGenome = Learn.mutate(Learn.crossOver(genA, genB));
 
-      // Add to generation
+      // 세대 수를 추가합니다.
       Learn.genomes.push(Network.fromJSON(newGenome));
     }
 
-    // Mutation-only
+    // 돌연 변이(mutation)만 진행
     while (Learn.genomes.length < Learn.genomeUnits) {
-      // Get two random Genomes
+      // 두 개의 랜덤 유전자를 가져옵니다.
       var gen = _.sample(bestGenomes).toJSON();
 
-      // Cross over and Mutate
+      // 돌연변이
       var newGenome = Learn.mutate(gen);
 
-      // Add to generation
+      // 세대 수를 추가합니다.
       Learn.genomes.push(Network.fromJSON(newGenome));
     }
 
     Learn.ui.logger.log('Completed generation '+Learn.generation);
 
-    // Execute next generation
+    // 다음 세대를 실행합니다.
     Learn.executeGeneration();
   })
 }
 
 
-// Sort all the genomes, and delete the worst one
-// untill the genome list has selectN elements.
+// 모든 유전자(genomes)을 정렬하고, 제일 안좋은 유전자를 제거합니다.
+// 유전자 리스트가 N개의 요소를 가질 때까지
 Learn.selectBestGenomes = function (selectN){
   var selected = _.sortBy(Learn.genomes, 'fitness').reverse();
 
@@ -126,11 +126,10 @@ Learn.selectBestGenomes = function (selectN){
 }
 
 
-// Waits the game to end, and start a new one, then:
-// 1) Set's listener for sensorData
-// 2) On data read, applyes the neural network, and
-//    set it's output
-// 3) When the game has ended and compute the fitness
+// 게임이 끝날 때까지 기다린 후 새 게임을 시작한 다음 :
+// 1) sensorData에 대한 리스너(listener) 설정
+// 2) 데이터 읽기에서 신경망(neural network)을 적용하고 출력을 설정합니다.
+// 3) 게임이 끝나고 적합도(fitness)가 계산할 때까지
 Learn.executeGenome = function (genome, next){
   if (Learn.state == 'STOP') {
     return;
@@ -139,7 +138,7 @@ Learn.executeGenome = function (genome, next){
   Learn.genome = Learn.genomes.indexOf(genome) + 1;
   // Learn.ui.logger.log('Executing genome '+Learn.genome);
 
-  // Check if genome has AT LEAST some experience
+  // 유전자 적어도 경험을 가지고 있는 지 확인합니다.
   if (Learn.shouldCheckExperience) {
     if (!Learn.checkExperience(genome)) {
       genome.fitness = 0;
@@ -150,7 +149,7 @@ Learn.executeGenome = function (genome, next){
 
   Learn.gm.startNewGame(function (){
 
-    // Reads sensor data, and apply network
+    // 센서 데이터를 읽고, 네트워크를 적용합니다.
     Learn.gm.onSensorData = function (){
       var inputs = [
         Learn.gm.sensors[0].value,
@@ -158,20 +157,20 @@ Learn.executeGenome = function (genome, next){
         Learn.gm.sensors[0].speed,
       ];
       // console.log(inputs);
-      // Apply to network
+      // 네트워크를 적용합니다.
       var outputs = genome.activate(inputs);
 
       Learn.gm.setGameOutput(outputs[0]);
     }
 
-    // Wait game end, and compute fitness
+    // 게임 끝나는 것을 기다리고, 적합도(fitness)를 계산합니다.
     Learn.gm.onGameEnd = function (points){
       Learn.ui.logger.log('Genome '+Learn.genome+' ended. Fitness: '+points);
 
-      // Save Genome fitness
+      // 유전자(genome) 적합도(fitness)를 저장합니다.
       genome.fitness = points;
 
-      // Go to next genome
+      // 다음 유전자(genome)으로 이동합니다.
       next();
     }
   });
@@ -179,14 +178,14 @@ Learn.executeGenome = function (genome, next){
 }
 
 
-// Validate if any acction occur uppon a given input (in this case, distance).
-// If genome only keeps a single activation value for any given input,
-// it will return false
+// 주어진 입력에 액션이 발생하면 유효성을 검사합니다 (이 경우 distance).
+// 유전자가 특정 입력에 대해 단일 활성 값만 유지하는 경우,
+// false를 반환합니다.
 Learn.checkExperience = function (genome) {
   
   var step = 0.1, start = 0.0, stop = 1;
 
-  // Inputs are default. We only want to test the first index
+  // 입력값은 기본값입니다. 처음 인덱스만 테스트합니다.
   var inputs = [0.0, 0.3, 0.2];
   var activation, state, outputs = {};
 
@@ -199,12 +198,12 @@ Learn.checkExperience = function (genome) {
     outputs[state] = true;
   }
 
-  // Count states, and return true if greater than 1
+  // 상태(state)를 카운트하고, 1보다 크면 true를 리턴합니다.
   return _.keys(outputs).length > 1;
 }
 
 
-// Load genomes saved from JSON file
+// 저장된 JSON 파일로부터 유전자(genomes)를 로드합니다.
 Learn.loadGenomes = function (genomes, deleteOthers){
   if (deleteOthers) {
     Learn.genomes = [];
@@ -220,8 +219,7 @@ Learn.loadGenomes = function (genomes, deleteOthers){
 }
 
 
-// Builds a new genome based on the 
-// expected number of inputs and outputs
+// 기대되는 입력과 출력의 수를 기반으로 새로운 유전자(genome)를 빌드합니다.
 Learn.buildGenome = function (inputs, outputs) {
   Learn.ui.logger.log('Build genome '+(Learn.genomes.length+1));
 
@@ -231,8 +229,8 @@ Learn.buildGenome = function (inputs, outputs) {
 }
 
 
-// SPECIFIC to Neural Network.
-// Those two methods convert from JSON to Array, and from Array to JSON
+// 신경망(Neural Network)에 명세
+// 이 두 메소드는 JSON을 Array로 변환하고 Array에서 JSON으로 변환합니다.
 Learn.crossOver = function (netA, netB) {
   // Swap (50% prob.)
   if (Math.random() > 0.5) {
@@ -241,23 +239,22 @@ Learn.crossOver = function (netA, netB) {
     netB = tmp;
   }
 
-  // Clone network
+  // 네트워크를 복제합니다.(clone)
   netA = _.cloneDeep(netA);
   netB = _.cloneDeep(netB);
 
-  // Cross over data keys
+  // 데이터 키(key)로 교차(cross over)
   Learn.crossOverDataKey(netA.neurons, netB.neurons, 'bias');
 
   return netA;
 }
 
 
-// Does random mutations across all
-// the biases and weights of the Networks
-// (This must be done in the JSON to
-// prevent modifying the current one)
+// 랜덤 돌연변이(mutation)을 네트워크의 bias 및 weight
+// (JSON에서이 작업을 수행해야 합니다.
+// 현재의 네트워크를 수정하는 것을 막습니다)
 Learn.mutate = function (net){
-  // Mutate
+  //돌연변이
   Learn.mutateDataKeys(net.neurons, 'bias', Learn.mutationProb);
   
   Learn.mutateDataKeys(net.connections, 'weight', Learn.mutationProb);
@@ -266,13 +263,12 @@ Learn.mutate = function (net){
 }
 
 
-// Given an Object A and an object B, both Arrays
-// of Objects:
-// 
-// 1) Select a cross over point (cutLocation)
-//    randomly (going from 0 to A.length)
-// 2) Swap values from `key` one to another,
-//    starting by cutLocation
+// 주어진 객체 A와 객체 B, 두 배열 오브젝트 :
+//
+// 1) 교차점 선택 (cutLocation)
+// 무작위로 (0에서 A.length로 이동)
+// 2) 'key'값을 다른 것으로 바꾼다.
+// cutLocation으로 시작
 Learn.crossOverDataKey = function (a, b, key) {
   var cutLocation = Math.round(a.length * Math.random());
 
@@ -286,10 +282,11 @@ Learn.crossOverDataKey = function (a, b, key) {
 }
 
 
-// Given an Array of objects with key `key`,
-// and also a `mutationRate`, randomly Mutate
-// the value of each key, if random value is
-// lower than mutationRate for each element.
+
+// 키`key` 또한 mutationRate를 가지는 객체의 배열이 주어진다면,
+// 무작위로 돌연변이(mutate)합니다.
+// 임의의 값이있는 경우 각 키의 값
+// 각 요소에 대해 mutationRate보다 낮습니다.
 Learn.mutateDataKeys = function (a, key, mutationRate){
   for (var k = 0; k < a.length; k++) {
     // Should mutate?
